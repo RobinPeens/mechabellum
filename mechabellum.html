@@ -1,0 +1,353 @@
+<html>
+
+<head>
+	<script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+	<script id="jsonFile" src="./test.json"></script>
+
+	<meta http-equiv="Content-Security-Policy" content="default-src 'self' style-src 'self' 'unsafe-inline';">
+	<meta http-equiv="X-Content-Security-Policy" content="default-src 'self' style-src 'self' 'unsafe-inline';">
+
+	<style>
+		.line {
+			border-bottom: 1px solid black;
+		}
+
+		.dataDisplay {
+			display: inline-block;
+		}
+
+		.dataDisplay>div {
+			float: left;
+			padding-right: 100px;
+			min-width: 200px;
+		}
+	</style>
+
+	<script>
+		const selectTemplate = (name, counters, counteredBy) => {
+			var html = `
+									<div class="selectList">
+											<span><input class="selectedUnit" type="checkbox" value="${name}"/></span>
+											<span><b>${name}</b></span>
+									</div>
+                `;
+
+			return html;
+		}
+
+		const nastyTemplate = (name, counters, counteredBy) => {
+			var html = `
+                <div>
+                    <span><b>${name}</b></span>
+                    <br>
+                    <span>counters</span>
+                    <ul>
+                        ${counters.map(a => `<li>${a}</li>`)}
+                    </ul>
+                    <span>counteredBy</span>
+                    <ul>
+                        ${counteredBy.map(a => `<li>${a}</li>`)}
+                    </ul>
+                </div>
+                `;
+
+			return html;
+		}
+	</script>
+	<script>
+		let selfCounter = true;
+		let usePoints = false;
+
+		let everyUnit = [];
+		const unitTemplate = {};
+		const allUnits = {};
+		const units = {
+  "Farseer": {
+    "counters": ["Wasp", "Wraith", "Sledgehammer", "Steel Ball"],
+    "counteredBy": ["Fortress", "Rhino", "War Factory"]
+  },
+  "Tarantula": {
+    "counters": ["Fang", "Crawler", "Mustang", "Wasp"],
+    "counteredBy": ["Fortress", "Hacker", "Marksman", "Melting Point", "Overlord", "Phoenix", "Rhino", "Sabertooth", "Scorpion", "Steel Ball", "War Factory"]
+  },
+  "Sandworm": {
+    "counters": ["Fire Badger", "Arclight", "Marksman", "Rhino", "Sabertooth", "Sledgehammer", "Steel Ball", "Typhoon", "Vulcan", "Tarantula", "Mustang"],
+    "counteredBy": ["War Factory", "Phoenix", "Overlord", "Steel Ball", "Melting Point", "Rhino"]
+  },
+  "Fire Badger": {
+    "counters": ["Crawler", "Fang", "Mustang"],
+    "counteredBy": ["Sabertooth", "Fortress", "Hacker", "Marksman", "Overlord", "Phoenix", "Rhino", "Scorpion", "War Factory"]
+  },
+  "Typhoon": {
+    "counters": ["Crawler", "Fang", "Wasp", "Mustang"],
+    "counteredBy": ["Fortress", "Marksman", "Melting Point", "Overlord", "Phoenix", "Rhino", "Sabertooth", "Scorpion", "Steel Ball", "War Factory"]
+  },
+  "Sabertooth": {
+    "counters": ["Arclight", "Steel Ball", "Stormcaller", "Fire Badger", "Sledgehammer", "Farseer"],
+    "counteredBy": ["Fortress", "Hacker", "Melting Point", "Overlord", "Phoenix", "Rhino"]
+  },
+  "Scorpion": {
+    "counters": ["Sledgehammer", "Steel Ball", "Arclight", "War Factory", "Farseer"],
+    "counteredBy": ["Marksman", "Phoenix", "Stormcaller", "Overlord"]
+  },
+  "Wraith": {
+    "counters": ["Crawler", "Fang", "Sledgehammer", "Steel Ball", "Wasp"],
+    "counteredBy": ["Overlord", "Phoenix", "Melting Point", "Marksman"]
+  },
+  "War Factory": {
+    "counters": ["Arclight", "Marksman", "Rhino", "Sledgehammer", "Steel Ball", "Vulcan", "Stormcaller", "Overlord", "Fire Badger", "Typhoon", "Sabertooth"],
+    "counteredBy": ["Melting Point", "Scorpion"]
+  },
+  "Phoenix": {
+    "counters": ["Arclight", "Overlord", "Rhino", "Stormcaller", "Vulcan", "Typhoon", "Sabertooth", "Fire Badger", "Scorpion"],
+    "counteredBy": ["Wasp", "Marksman", "Mustang", "Fang", "Fortress"]
+  },
+  "Arclight": {
+    "counters": ["Crawler", "Fang", "Mustang", "Steel Ball", "Sledgehammer", "Fire Badger", "Typhoon"],
+    "counteredBy": ["Marksman", "Stormcaller", "Rhino", "Overlord", "Fortress", "Phoenix", "Wraith", "War Factory", "Scorpion", "Sabertooth"]
+  },
+  "Hacker": {
+    "counters": ["Steel Ball", "Sledgehammer", "Rhino", "Scorpion", "Melting Point", "Fire Badger", "Arclight"],
+    "counteredBy": ["Overlord", "Fortress", "Stormcaller", "Crawler", "Fang", "Phoenix", "Wraith", "War Factory"]
+  },
+  "Sledgehammer": {
+    "counters": ["Crawler", "Mustang", "Stormcaller"],
+    "counteredBy": ["Hacker", "Fortress", "Phoenix", "Overlord", "Scorpion", "War Factory", "Marksman", "Rhino"]
+  },
+  "Stormcaller": {
+    "counters": ["Arclight", "Fang", "Melting Point", "Vulcan", "Mustang", "Marksman", "Fortress", "Scorpion", "Typhoon"],
+    "counteredBy": ["Overlord", "Phoenix", "Stormcaller", "Crawler", "Sledgehammer", "Rhino", "War Factory", "Sabertooth"]
+  },
+  "Overlord": {
+    "counters": ["Rhino", "Steel Ball", "Sledgehammer", "Stormcaller", "Vulcan", "Arclight", "Hacker", "Scorpion", "Fire Badger", "Sabertooth", "Typhoon", "War Factory", "Wraith"],
+    "counteredBy": ["Marksman", "Melting Point", "Phoenix", "Mustang", "Fortress"]
+  },
+  "Crawler": {
+    "counters": ["Fang", "Hacker", "Marksman", "Melting Point", "Steel Ball", "Stormcaller", "Sabertooth", "Scorpion"],
+    "counteredBy": ["Arclight", "Vulcan", "Rhino", "Wraith", "Sledgehammer", "Fire Badger", "Typhoon", "Tarantula"]
+  },
+  "Fang": {
+    "counters": [],
+    "counteredBy": ["Crawler", "Mustang", "Stormcaller", "Vulcan", "Typhoon", "Tarantula"]
+  },
+  "Steel Ball": {
+    "counters": ["Fortress", "Rhino", "Melting Point", "Vulcan", "War Factory", "Fire Badger", "Typhoon"],
+    "counteredBy": ["Crawler", "Hacker", "Phoenix", "Overlord", "Stormcaller", "Scorpion"]
+  },
+  "Mustang": {
+    "counters": ["Fang", "Phoenix", "Wasp", "Crawler", "Stormcaller"],
+    "counteredBy": ["Arclight", "Sledgehammer", "Stormcaller", "Vulcan", "Fortress", "Rhino", "Fire Badger", "Typhoon", "Tarantula"]
+  },
+  "Wasp": {
+    "counters": ["Marksman", "Phoenix", "Melting Point", "Vulcan", "Overlord"],
+    "counteredBy": ["Mustang", "Fortress", "Fang", "Wraith", "Typhoon", "Tarantula"]
+  },
+  "Rhino": {
+    "counters": ["Arclight", "Vulcan", "Stormcaller", "Crawler", "Sledgehammer", "Fire Badger", "Marksman", "Mustang", "Typhoon"],
+    "counteredBy": ["Fortress", "Hacker", "Melting Point", "Steel Ball", "Phoenix", "Overlord", "War Factory"]
+  },
+  "Melting Point": {
+    "counters": ["Fortress", "Rhino", "Vulcan", "Wraith", "War Factory", "Scorpion", "Typhoon"],
+    "counteredBy": ["Steel Ball", "Crawler", "Marksman", "Phoenix", "Stormcaller", "Hacker"]
+  },
+  "Marksman": {
+    "counters": ["Phoenix", "Overlord", "Vulcan", "Arclight", "Sledgehammer"],
+    "counteredBy": ["Crawler", "Fang", "Stormcaller", "Wasp", "Fortress", "Rhino"]
+  },
+  "Fortress": {
+    "counters": ["Arclight", "Rhino", "Sledgehammer", "Vulcan", "Wasp", "Hacker", "Overlord", "Phoenix", "Typhoon", "Scorpion"],
+    "counteredBy": ["Crawler", "Melting Point", "Overlord", "Stormcaller", "Steel Ball"]
+  },
+  "Vulcan": {
+    "counters": ["Crawler", "Fang", "Mustang"],
+    "counteredBy": ["Fortress", "Melting Point", "Overlord", "Phoenix", "Rhino", "Stormcaller"]
+  }
+};
+
+		const sortABC = (a, b) => {
+			if (a < b) {
+				return -1;
+			}
+			if (a > b) {
+				return 1;
+			}
+			return 0;
+		}
+
+		const sortResults = (a, b) => {
+			if (a.cnt < b.cnt) {
+				return 1;
+			}
+			if (a.cnt > b.cnt) {
+				return -1;
+			}
+			return 0;
+		}
+
+		const buildList = (keys) => {
+			for (key of keys) {
+				allUnits[key] = 0;
+				unitTemplate[key] = 0;
+
+				for (item of units[key].counters) {
+					allUnits[item] = 0;
+					unitTemplate[item] = 0;
+				}
+
+				for (item of units[key].counteredBy) {
+					allUnits[item] = 0;
+					unitTemplate[item] = 0;
+				}
+			}
+
+			const allKeys = Object.keys(allUnits);
+			everyUnit = [...allKeys.sort(sortABC)];
+		}
+
+		const getSelected = () => {
+			return everyUnit.filter(a => allUnits[a] == 1);
+		}
+
+		const calculate = () => {
+			const selected = getSelected();
+			const countersResult = { ...unitTemplate };
+			const counteredByResult = { ...unitTemplate };
+
+			selected.forEach(a => {
+				const counters = units[a].counters;
+				const counteredBy = units[a].counteredBy;
+
+				if (selfCounter) {
+					countersResult[a] = !usePoints ? 1 : 10;
+					counteredByResult[a] = !usePoints ? 1 : 5;
+				}
+
+				if (!usePoints) {
+					counters.forEach(g => {
+						countersResult[g] += 1;
+					});
+
+					counteredBy.forEach(b => {
+						counteredByResult[b] += 1;
+					});
+				} else {
+					counters.forEach(g => {
+						countersResult[g] += 10;
+						counteredByResult[g] -= 5;
+					});
+
+					counteredBy.forEach(b => {
+						counteredByResult[b] += 10;
+						countersResult[b] -= 5;
+					});
+				}
+			});
+
+			return {
+				counters: everyUnit.map(a => {
+					return {
+						name: a,
+						cnt: countersResult[a]
+					};
+				}).filter(a => a.cnt > 0).sort(sortResults),
+				counteredBy: everyUnit.map(a => {
+					return {
+						name: a,
+						cnt: counteredByResult[a]
+					};
+				}).filter(a => a.cnt > 0).sort(sortResults),
+			}
+		}
+
+		const updateLists = (data) => {
+			$(".counters").empty();
+			$(".counteredBy").empty();
+
+			for (key of data.counters) {
+				$(".counters").append(`<li>${key.name}: ${key.cnt}</li>`);
+			}
+
+			for (key of data.counteredBy) {
+				$(".counteredBy").append(`<li>${key.name}: ${key.cnt}</li>`);
+			}
+		}
+
+		const startApp = () => {
+			const unsortedKeys = Object.keys(units);
+			const keys = unsortedKeys.sort(sortABC);
+			buildList(keys);
+
+			$(".main").empty();
+
+			for (key of keys) {
+				$(".main").append(selectTemplate(key, units[key].counters, units[key].counteredBy));
+			}
+
+			$(".selfCounter").change(function () {
+				selfCounter = this.checked;
+				updateLists(calculate());
+			});
+
+			$(".usePoints").change(function () {
+				usePoints = this.checked;
+				updateLists(calculate());
+			});
+
+			$(".selectedUnit").change(function () {
+				if (this.checked) {
+					allUnits[this.value] = 1;
+				} else {
+					allUnits[this.value] = 0;
+				}
+
+				updateLists(calculate());
+			});
+		}
+	</script>
+</head>
+
+<body>
+
+	<div>
+		<div>
+			<input type="checkbox" class="selfCounter" checked />
+			<span>Add Self to Counter/ed</span>
+		</div>
+		<div>
+			<input type="checkbox" class="usePoints" />
+			<span>Use Points</span>
+		</div>
+	</div>
+	<br>
+	<div class="line"></div>
+	<br>
+	<div class="dataDisplay">
+		<div class="counterList">
+			<span><b>Selected Units</b></span>
+			<div class="line"></div>
+			<span class="main"></span>
+		</div>
+
+		<div class="counterList">
+			<span><b>Counters</b></span>
+			<div class="line"></div>
+			<ul>
+				<span class="counters"></span>
+			</ul>
+		</div>
+
+		<div class="counteredList">
+			<span><b>Countered By</b></span>
+			<div class="line"></div>
+			<ul>
+				<span class="counteredBy"></span>
+			</ul>
+		</div>
+	</div>
+
+	<script>
+		startApp();
+	</script>
+</body>
+
+</html>
